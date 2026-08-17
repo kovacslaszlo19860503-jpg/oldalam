@@ -188,7 +188,7 @@ async function render(){
  const msgs = await loadMsgs();
  if(cnt) cnt.textContent = msgs.length ? `${msgs.length} üzenet - KÖZÖS, telefonon is látszik! ✅` : "";
  if(msgs.length===0){
-  list.innerHTML = `<div class="empty">Még nincs üzenet. Légy te az első! 👇<br><span style="font-size:11px">Ez már a token nélküli közös fal!</span></div>`;
+  list.innerHTML = `<div class="empty">Üzenetet bárki küldhet 👇<br><span style="font-size:11px">irhatsz</span></div>`;
   if(status) status.textContent = "";
   return;
  }
