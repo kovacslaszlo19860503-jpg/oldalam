@@ -198,7 +198,7 @@ async function render(){
   d.innerHTML=`<div class="head"><span class="name">👤 ${esc(m.name)}</span><span>${esc(m.date)}</span></div><div class="text" style="color:#eee;white-space:pre-wrap">${esc(m.text)}</div>`;
   list.appendChild(d);
  });
- if(status) status.textContent = "✅ Közös vendégkönyv betöltve - minden eszközön látszik!";
+ if(status) status.textContent = "✅ Minden üzenet";
  setTimeout(()=>{ if(status) status.textContent=""; }, 3000);
 }
 
