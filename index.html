@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zenéim + Vendégkönyv + Számláló</title>
+<title>Zene</title>
 <style>
 body{margin:0;background:#0f0f0f;color:white;font-family:Segoe UI,Arial;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
 h1{margin:20px 0 5px;font-size:32px}
@@ -42,8 +42,8 @@ audio{width:100%;margin:10px 0}
 </style>
 </head>
 <body>
-<h1>🎵 Zenéim</h1>
-<p class="sub">A feltöltött zenéim listája - kattints a lejátszáshoz</p>
+<h1>🎵 Zene</h1>
+<p class="sub">lista</p>
 
 <div class="counter-box">
 <div class="counter-item">
@@ -80,19 +80,19 @@ audio{width:100%;margin:10px 0}
 <div id="player-box">
 
 <div id="cover">🎧</div>
-<div id="now">Válassz egy zenét...</div>
+<div id="now">Válassz egy zenét..és kattanj</div>
 <audio id="audio" controls controlsList="nodownload"></audio>
 </div>
 <div id="list">Betöltés...</div>
 
 <div id="guestbook">
-<h2>💬 Vendégkönyv - Üzenőfal</h2>
-<p class="desc">TOKEN NÉLKÜL közös! Telefonon is megmarad! 🎵</p>
+<h2>💬 Dobj egy üzit</h2>
+<p class="desc">Bátran 🎵</p>
 <input id="gName" class="g-input" placeholder="Neved... (pl: Laci)">
 <textarea id="gText" class="g-input" rows="3" placeholder="Üzeneted... (pl: Király a Darude! 🎧)"></textarea>
-<button class="g-btn" onclick="addMsg()">📩 Üzenet küldése</button>
+<button class="g-btn" onclick="addMsg()">📩 küld ell</button>
 <div id="sharedStatus" style="text-align:center;color:#ffcc70;font-size:11px;margin-top:8px"></div><div id="gCount" style="text-align:center;color:#666;font-size:12px;margin-top:12px"></div>
-<div id="gList" style="margin-top:10px"><div class="empty">Még nincs üzenet. Légy te az első! 👇</div></div>
+<div id="gList" style="margin-top:10px"><div class="empty">nics üzenet irjál már 👇</div></div>
 <p style="text-align:center;color:#555;font-size:11px;margin-top:20px">💜 Saját vendégkönyv - nem visz el másik oldalra, itt marad minden</p>
 </div>
 
@@ -188,7 +188,7 @@ async function render(){
   d.innerHTML=`<div class="head"><span class="name">👤 ${esc(m.name)}</span><span>${esc(m.date)}</span></div><div class="text" style="color:#eee;white-space:pre-wrap">${esc(m.text)}</div>`;
   list.appendChild(d);
  });
- if(status) status.textContent = "✅ Közös vendégkönyv betöltve - minden eszközön látszik!";
+ if(status) status.textContent = "✅ üzenet";
  setTimeout(()=>{ if(status) status.textContent=""; }, 3000);
 }
 
