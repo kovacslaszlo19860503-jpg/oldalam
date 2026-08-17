@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenéim + Vendégkönyv + Számláló</title>
+<style>
+body{margin:0;background:#0f0f0f;color:white;font-family:Segoe UI,Arial;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+h1{margin:20px 0 5px;font-size:32px}
+p.sub{color:#aaa;margin:0 0 15px;text-align:center}
+#player-box{background:#1e1e1e;border-radius:20px;padding:20px;width:100%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+#cover{width:100%;height:250px;background:linear-gradient(135deg,#6e45e2,#88d3ce);border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:80px}
+#now{margin:15px 0 10px;font-weight:bold;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+audio{width:100%;margin:10px 0}
+#list{width:100%;max-width:500px;margin-top:20px}
+.song{background:#1e1e1e;margin:8px 0;padding:12px 15px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:0.2s}
+.song:hover{background:#2a2a2a}
+.song.active{background:#6e45e2}
+.song span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.btn{border:none;background:#333;color:white;border-radius:50%;width:36px;height:36px;cursor:pointer}
+#guestbook{width:100%;max-width:500px;margin-top:40px;background:#1e1e1e;border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+#guestbook h2{text-align:center;color:#6e45e2;margin:0 0 5px;font-size:22px}
+#guestbook p.desc{text-align:center;color:#aaa;font-size:13px;margin:0 0 15px}
+.g-input{width:100%;background:#2a2a2a;border:1px solid #333;color:white;padding:12px;border-radius:10px;margin:6px 0;font-family:inherit;box-sizing:border-box}
+.g-input:focus{outline:none;border-color:#6e45e2}
+.g-btn{width:100%;background:linear-gradient(135deg,#6e45e2,#88d3ce);border:none;color:white;padding:12px;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:10px;font-size:15px}
+.g-btn:hover{opacity:0.9}
+.msg{background:#2a2a2a;padding:12px 15px;border-radius:12px;margin:10px 0;border-left:4px solid #6e45e2;animation:slideIn 0.3s}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.msg .head{display:flex;justify-content:space-between;font-size:13px;color:#aaa;margin-bottom:6px}
+.msg .name{color:#88d3ce;font-weight:bold}
+.msg .text{color:#eee;word-wrap:break-word;white-space:pre-wrap}
+.empty{text-align:center;color:#666;padding:20px;font-style:italic}
+.del{color:#ff5555;cursor:pointer;font-size:12px;margin-left:10px}
+.del:hover{text-decoration:underline}
+.counter-box{background:#1e1e1e;border-radius:15px;padding:12px 20px;margin-bottom:20px;width:100%;max-width:500px;display:flex;justify-content:space-around;align-items:center;box-shadow:0 5px 20px rgba(0,0,0,0.3);border:1px solid #2a2a2a}
+.counter-item{text-align:center}
+.counter-item .num{font-size:26px;font-weight:bold;color:#6e45e2;display:block}
+.counter-item .label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:1px}
+.counter-item .num#globalCount{color:#88d3ce}
+.counter-item .num#todayCount{color:#ffcc70}
+</style>
+</head>
+<body>
+<h1>🎵 Zenéim</h1>
+<p class="sub">A feltöltött zenéim listája - kattints a lejátszáshoz</p>
+
+<div class="counter-box">
+<div class="counter-item">
+<span class="num" id="globalCount">...</span>
+<span class="label">👁️ Összes látogató</span>
+</div>
+<div class="counter-item">
+<span class="num" id="todayCount">1</span>
+<span class="label">📅 Ma itt jártál</span>
+</div>
+<div class="counter-item">
+<span class="num" id="songCount">...</span>
+<span class="label">🎵 Zene</span>
+</div>
+</div>
+
+
+<div id="upload-box" style="width:100%;max-width:500px;background:#1e1e1e;border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:1px dashed #6e45e2">
+<h3 style="text-align:center;margin:0 0 10px;color:#88d3ce">⬆️ Közös zene feltöltés - TOKEN NÉLKÜL!</h3>
+<p style="text-align:center;color:#aaa;font-size:12px;margin:0 0 15px">Bárki tölthet fel mp3-at! Csak zenét enged! 🎵</p>
+<input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.ogg,.flac" style="display:none">
+<button onclick="document.getElementById('fileInput').click()" style="width:100%;background:#2a2a2a;border:1px dashed #555;color:#aaa;padding:15px;border-radius:10px;cursor:pointer">📁 Kattints és válassz zenét (mp3, wav, m4a, ogg, flac)</button>
+<div id="fileInfo" style="text-align:center;color:#88d3ce;margin:10px 0;font-size:13px;display:none"></div>
+<button id="upBtn" onclick="uploadFile()" style="width:100%;background:linear-gradient(135deg,#6e45e2,#88d3ce);border:none;color:white;padding:12px;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:10px;display:none">🚀 Feltöltés mindenkinek!</button>
+<div id="upStatus" style="text-align:center;margin-top:10px;font-size:13px"></div>
+<div id="adminBox" style="margin-top:20px;border-top:1px solid #333;padding-top:15px">
+<p style="color:#666;font-size:10px;text-align:center;margin:5px 0">Tulajdonos beállítás (csak egyszer):</p>
+<input id="ghToken" type="password" placeholder="GitHub Token (ghp_... ) - csak a tulajnak" style="width:100%;background:#1a1a1a;border:1px solid #333;color:white;padding:8px;border-radius:8px;box-sizing:border-box;font-size:11px">
+<button onclick="saveOwnerToken()" style="width:100%;background:#333;border:none;color:#aaa;padding:8px;border-radius:8px;cursor:pointer;margin-top:5px;font-size:11px">🔒 Token mentése (közös feltöltéshez)</button>
+<div id="tokenStatus" style="text-align:center;color:#666;font-size:10px;margin-top:5px"></div>
+</div>
+</div>
+
+<div id="player-box">
+
+<div id="cover">🎧</div>
+<div id="now">Válassz egy zenét...</div>
+<audio id="audio" controls controlsList="nodownload"></audio>
+</div>
+<div id="list">Betöltés...</div>
+
+<div id="guestbook">
+<h2>💬 Vendégkönyv - Üzenőfal</h2>
+<p class="desc">TOKEN NÉLKÜL közös! Telefonon is megmarad! 🎵</p>
+<input id="gName" class="g-input" placeholder="Neved... (pl: Laci)">
+<textarea id="gText" class="g-input" rows="3" placeholder="Üzeneted... (pl: Király a Darude! 🎧)"></textarea>
+<button class="g-btn" onclick="addMsg()">📩 Üzenet küldése</button>
+<div id="sharedStatus" style="text-align:center;color:#ffcc70;font-size:11px;margin-top:8px"></div><div id="gCount" style="text-align:center;color:#666;font-size:12px;margin-top:12px"></div>
+<div id="gList" style="margin-top:10px"><div class="empty">Még nincs üzenet. Légy te az első! 👇</div></div>
+<p style="text-align:center;color:#555;font-size:11px;margin-top:20px">💜 Saját vendégkönyv - nem visz el másik oldalra, itt marad minden</p>
+</div>
+
+<script>
+const user = "kovacslaszlo19860503-jpg";
+const repo = "oldalam";
+const audio = document.getElementById('audio');
+const now = document.getElementById('now');
+const listDiv = document.getElementById('list');
+async function loadSongs(){
+ try{
+  const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/?t=${Date.now()}`);
+  const files = await res.json();
+  if(!Array.isArray(files)){
+    console.log("GitHub API hiba:", files);
+    if(files.message && files.message.includes("rate limit")){
+      listDiv.innerHTML = `<div style="text-align:center;color:#ffcc70;margin-top:20px">⏳ GitHub túlterhelt, próbáld 1 perc múlva frissíteni!<br><small>${files.message}</small></div>`;
+    } else {
+      listDiv.innerHTML = `<div style="text-align:center;color:#ff5555;margin-top:20px">Hiba: ${files.message || 'Ismeretlen hiba'}<br>Frissítsd az oldalt!</div>`;
+    }
+    document.getElementById('songCount').textContent = "0";
+    return;
+  }
+  const mp3s = files.filter(f=>{ const n=f.name.toLowerCase(); return n.endsWith('.mp3')||n.endsWith('.wav')||n.endsWith('.m4a')||n.endsWith('.mp4')||n.endsWith('.ogg')||n.endsWith('.flac'); });
+  document.getElementById('songCount').textContent = mp3s.length;
+  if(mp3s.length===0){
+   listDiv.innerHTML = `<div style="text-align:center;color:#888;margin-top:20px">Még nincs feltöltve zene.<br>Tölts fel mp3 fájlokat a GitHub-ra!</div>`;
+   return;
+  }
+  listDiv.innerHTML = "";
+  mp3s.forEach((file)=>{
+   const div = document.createElement('div');
+   div.className = 'song';
+   div.innerHTML = `<span>🎵 ${file.name}</span><button class="btn">▶</button>`;
+   div.onclick = ()=>{
+    document.querySelectorAll('.song').forEach(s=>s.classList.remove('active'));
+    div.classList.add('active');
+    audio.src = file.download_url;
+    now.textContent = file.name;
+    audio.play();
+   };
+   listDiv.appendChild(div);
+  });
+ }catch(e){ 
+  listDiv.innerHTML = "Hiba: "+e;
+  document.getElementById('songCount').textContent = "0";
+ }
+}
+loadSongs();
+audio.addEventListener('ended', ()=>{
+ const active = document.querySelector('.song.active');
+ if(active && active.nextElementSibling) active.nextElementSibling.click();
+});
+
+// KÖZÖS VENDÉGKÖNYV - TOKEN NÉLKÜL, MINDEN ESZKÖZÖN LÁTSZIK! - kvdb.io
+const KVDB_BUCKET = "ozd-zenek-vendegkonyv-2026-laci"; // fix közös név, mindenkinél ugyanaz!
+const KVDB_KEY = "uzenetek";
+const KVDB_URL = `https://kvdb.io/${KVDB_BUCKET}/${KVDB_KEY}`;
+const LOCAL_KEY = "guestbook_local_backup";
+
+function esc(s){ return String(s||'').replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+async function loadMsgs(){
+ try{
+  const r = await fetch(KVDB_URL + `?t=${Date.now()}`);
+  if(r.ok){
+   const txt = await r.text();
+   if(txt){
+    const data = JSON.parse(txt);
+    if(Array.isArray(data)) return data;
+   }
+  }
+ }catch(e){ console.log("kvdb load hiba", e); }
+ try{ return JSON.parse(localStorage.getItem(LOCAL_KEY)||"[]"); }catch{ return []; }
+}
+
+async function saveMsgs(msgs){
+ localStorage.setItem(LOCAL_KEY, JSON.stringify(msgs));
+ try{
+  await fetch(KVDB_URL, {
+   method: 'POST',
+   headers: {'Content-Type':'application/json'},
+   body: JSON.stringify(msgs)
+  });
+ }catch(e){ console.log("kvdb save hiba", e); }
+}
+
+async function render(){
+ const list = document.getElementById('gList');
+ const cnt = document.getElementById('gCount');
+ const status = document.getElementById('sharedStatus');
+ if(status) status.textContent = "Betöltés közösből...";
+ const msgs = await loadMsgs();
+ if(cnt) cnt.textContent = msgs.length ? `${msgs.length} üzenet - KÖZÖS, telefonon is látszik! ✅` : "";
+ if(msgs.length===0){
+  list.innerHTML = `<div class="empty">Még nincs üzenet. Légy te az első! 👇<br><span style="font-size:11px">Ez már a token nélküli közös fal!</span></div>`;
+  if(status) status.textContent = "";
+  return;
+ }
+ list.innerHTML = "";
+ [...msgs].reverse().forEach(m=>{
+  const d=document.createElement('div'); d.className='msg';
+  d.innerHTML=`<div class="head"><span class="name">👤 ${esc(m.name)}</span><span>${esc(m.date)}</span></div><div class="text" style="color:#eee;white-space:pre-wrap">${esc(m.text)}</div>`;
+  list.appendChild(d);
+ });
+ if(status) status.textContent = "✅ Közös vendégkönyv betöltve - minden eszközön látszik!";
+ setTimeout(()=>{ if(status) status.textContent=""; }, 3000);
+}
+
+async function addMsg(){
+ const nameEl=document.getElementById('gName');
+ const textEl=document.getElementById('gText');
+ const name=(nameEl.value.trim()||"Névtelen");
+ const text=textEl.value.trim();
+ if(!text){ alert("Írj üzenetet!"); return; }
+ const status=document.getElementById('sharedStatus');
+ status.textContent="⏳ Mentés közösbe (telefonon is látszani fog)...";
+ const date=new Date().toLocaleString('hu-HU');
+ const msgs=await loadMsgs();
+ msgs.push({name,text,date});
+ await saveMsgs(msgs);
+ textEl.value="";
+ status.textContent="✅ Elmentve! Most már telefonon is látszik!";
+ render();
+}
+
+async function delMsg(i){
+ if(!confirm("Törlöd ezt az üzenetet? Mindenkinél törlődik!")) return;
+ const msgs=await loadMsgs();
+ msgs.splice(i,1);
+ await saveMsgs(msgs);
+ render();
+}
+document.getElementById('gText').addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); addMsg(); } });
+
+
+// LÁTOGATÓ SZÁMLÁLÓ
+
+// FELTÖLTÉS LOGIKA - TOKEN NÉLKÜLI KÖZÖS, CSAK MP3/ZENE!
+const TOKEN_BUCKET = "ozd-zenek-vendegkonyv-2026-laci-token";
+const TOKEN_KEY = "gh_token_shared";
+const TOKEN_URL = `https://kvdb.io/${TOKEN_BUCKET}/${TOKEN_KEY}`;
+
+let selectedFile = null;
+const allowedExt = [".mp3",".wav",".m4a",".ogg",".flac"];
+const blockedExt = [".html",".htm",".js",".php",".exe",".bat",".sh",".svg"];
+
+function isAllowedFile(name){
+  const lower = name.toLowerCase();
+  if(blockedExt.some(ext=>lower.endsWith(ext))) return false;
+  return allowedExt.some(ext=>lower.endsWith(ext));
+}
+
+document.getElementById('fileInput').addEventListener('change', e=>{
+ selectedFile = e.target.files[0];
+ if(!selectedFile) return;
+ const info = document.getElementById('fileInfo');
+ // Ellenőrzés - csak zene!
+ if(!isAllowedFile(selectedFile.name)){
+   info.style.display='block';
+   info.style.color='#ff5555';
+   info.textContent = `❌ Csak zene! Nem lehet: ${selectedFile.name} - Engedett: mp3, wav, m4a, ogg, flac`;
+   document.getElementById('upBtn').style.display='none';
+   selectedFile = null;
+   return;
+ }
+ if(selectedFile.size > 30*1024*1024){
+   info.style.display='block';
+   info.style.color='#ff5555';
+   info.textContent = `❌ Túl nagy! Max 30MB! Ez: ${(selectedFile.size/1024/1024).toFixed(1)}MB`;
+   document.getElementById('upBtn').style.display='none';
+   selectedFile = null;
+   return;
+ }
+ info.style.display='block';
+ info.style.color='#88d3ce';
+ info.textContent = `🎵 ${selectedFile.name} (${(selectedFile.size/1024/1024).toFixed(2)} MB) - OK!`;
+ document.getElementById('upBtn').style.display='block';
+});
+
+async function getSharedToken(){
+  // 1. localStorage
+  let tok = localStorage.getItem('gh_token');
+  if(tok) return tok;
+  // 2. kvdb közös
+  try{
+    const r = await fetch(TOKEN_URL+`?t=${Date.now()}`);
+    if(r.ok){
+      const t = await r.text();
+      if(t && t.startsWith('ghp_')) return t.trim();
+    }
+  }catch(e){}
+  return null;
+}
+
+async function saveOwnerToken(){
+  const input = document.getElementById('ghToken');
+  const token = input.value.trim();
+  const status = document.getElementById('tokenStatus');
+  if(!token.startsWith('ghp_')){ status.textContent='❌ ghp_-val kell kezdődnie!'; return; }
+  localStorage.setItem('gh_token', token);
+  status.textContent='⏳ Mentés...';
+  try{
+    await fetch(TOKEN_URL, {method:'POST', body: token});
+    status.textContent='';
+    document.getElementById('adminBox').style.display='none';
+    alert('✅ Kész! Mostantól működik mindenkinek token nélkül!');
+  }catch(e){
+    status.textContent='';
+    document.getElementById('adminBox').style.display='none';
+  }
+}
+
+async function uploadFile(){
+ if(!selectedFile){ alert('Válassz fájlt!'); return; }
+ if(!isAllowedFile(selectedFile.name)){ alert('Csak mp3/wav/m4a/ogg/flac lehet!'); return; }
+ const token = await getSharedToken();
+ if(!token){
+   alert('A tulajdonosnak (neked) egyszer be kell állítani a tokent alul! Utána már mindenki tud token nélkül feltölteni!');
+   document.getElementById('adminBox').style.border='1px solid #ff5555';
+   return;
+ }
+ const status = document.getElementById('upStatus');
+ status.style.color='#ffcc70';
+ status.textContent='⏳ Feltöltés... '+selectedFile.name+' (közös, token nélkül)';
+ try{
+  const reader = new FileReader();
+  reader.onload = async function(){
+   const base64 = reader.result.split(',')[1];
+   // Biztonság: név tisztítás - nem engedünk .. vagy / jelet
+   let safeName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+   if(!isAllowedFile(safeName)) safeName += '.mp3';
+   const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${encodeURIComponent(safeName)}`,{
+    method:'PUT',
+    headers:{'Authorization':`token ${token}`,'Content-Type':'application/json'},
+    body: JSON.stringify({message:`Közös upload ${safeName} via website`, content: base64})
+   });
+   const data = await res.json();
+   if(res.ok){
+    status.style.color='#55ff99';
+    status.textContent='✅ Feltöltve! '+safeName+' - 1 perc múlva ott lesz mindenkinek!';
+    setTimeout(()=>{ loadSongs(); }, 2000);
+   } else {
+    status.style.color='#ff5555';
+    if(data.message && data.message.includes('already exists')) status.textContent='⚠️ Ilyen nevű zene már van! Nevezd át!';
+    else status.textContent='❌ Hiba: '+(data.message||res.statusText);
+   }
+  };
+  reader.readAsDataURL(selectedFile);
+ }catch(err){
+  document.getElementById('upStatus').style.color='#ff5555';
+  document.getElementById('upStatus').textContent='❌ Hiba: '+err;
+ }
+}
+
+// token betöltés kijelzés - NEM mutat szöveget!
+(async()=>{
+ const saved = localStorage.getItem('gh_token');
+ if(saved) {
+   document.getElementById('ghToken').value = saved;
+   document.getElementById('tokenStatus').textContent='';
+   document.getElementById('adminBox').style.display='none';
+ } else {
+   try{
+     const r = await fetch(TOKEN_URL+`?t=${Date.now()}`);
+     if(r.ok){
+       const t = await r.text();
+       if(t && t.startsWith('ghp_')){
+         document.getElementById('tokenStatus').textContent='';
+         document.getElementById('adminBox').style.display='none';
+       } else {
+         document.getElementById('tokenStatus').textContent='';
+       }
+     }
+   }catch(e){}
+ }
+})();
+
+
+async function updateVisitorCounters(){
+ // Globális számláló - CountAPI
+ try{
+  const namespace = "kovacslaszlo19860503-jpg-oldalam-v4";
+  const key = "latogato";
+  const res = await fetch(`https://api.countapi.xyz/hit/${namespace}/${key}`);
+  const data = await res.json();
+  document.getElementById('globalCount').textContent = data.value.toLocaleString('hu-HU');
+ }catch(e){
+  let local = parseInt(localStorage.getItem("global_visits")||"0");
+  local++;
+  localStorage.setItem("global_visits", local);
+  document.getElementById('globalCount').textContent = local;
+ }
+
+ // Napi
+ let today = new Date().toLocaleDateString('hu-HU');
+ let last = localStorage.getItem("last_visit_date");
+ let todayCount = parseInt(localStorage.getItem("today_count")||"0");
+ if(last !== today){ todayCount = 1; } else { todayCount++; }
+ localStorage.setItem("last_visit_date", today);
+ localStorage.setItem("today_count", todayCount);
+ document.getElementById('todayCount').textContent = todayCount;
+}
+
+render();
+updateVisitorCounters();
+</script>
+</body>
+</html>
