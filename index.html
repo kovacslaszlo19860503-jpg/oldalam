@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zenéim + Vendégkönyv + Számláló</title>
+<title>Zenéim</title>
 <style>
 body{margin:0;background:#0f0f0f;color:white;font-family:Segoe UI,Arial;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
 h1{margin:20px 0 5px;font-size:32px}
@@ -43,7 +43,7 @@ audio{width:100%;margin:10px 0}
 </head>
 <body>
 <h1>🎵 Zenéim</h1>
-<p class="sub">A feltöltött zenéim listája - kattints a lejátszáshoz</p>
+<p class="sub">A feltöltött zen</p>
 
 <div class="counter-box">
 <div class="counter-item">
@@ -62,8 +62,8 @@ audio{width:100%;margin:10px 0}
 
 
 <div id="upload-box" style="width:100%;max-width:500px;background:#1e1e1e;border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:1px dashed #6e45e2">
-<h3 style="text-align:center;margin:0 0 10px;color:#88d3ce">⬆️ Közös zene feltöltés - TOKEN NÉLKÜL!</h3>
-<p style="text-align:center;color:#aaa;font-size:12px;margin:0 0 15px">Bárki tölthet fel mp3-at! Csak zenét enged! 🎵</p>
+<h3 style="text-align:center;margin:0 0 10px;color:#88d3ce">⬆️ zene feltöltés</h3>
+<p style="text-align:center;color:#aaa;font-size:12px;margin:0 0 15px">Bárki tölthet fel 🎵</p>
 <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,.ogg,.flac" style="display:none">
 <button onclick="document.getElementById('fileInput').click()" style="width:100%;background:#2a2a2a;border:1px dashed #555;color:#aaa;padding:15px;border-radius:10px;cursor:pointer">📁 Kattints és válassz zenét (mp3, wav, m4a, ogg, flac)</button>
 <div id="fileInfo" style="text-align:center;color:#88d3ce;margin:10px 0;font-size:13px;display:none"></div>
@@ -86,13 +86,13 @@ audio{width:100%;margin:10px 0}
 <div id="list">Betöltés...</div>
 
 <div id="guestbook">
-<h2>💬 Vendégkönyv - Üzenőfal</h2>
-<p class="desc">TOKEN NÉLKÜL közös! Telefonon is megmarad! 🎵</p>
+<h2>💬 üzenjél</h2>
+<p class="desc"> közös! üzenetek 🎵</p>
 <input id="gName" class="g-input" placeholder="Neved... (pl: Laci)">
 <textarea id="gText" class="g-input" rows="3" placeholder="Üzeneted... (pl: Király a Darude! 🎧)"></textarea>
-<button class="g-btn" onclick="addMsg()">📩 Üzenet küldése</button>
+<button class="g-btn" onclick="addMsg()">📩 küldd</button>
 <div id="sharedStatus" style="text-align:center;color:#ffcc70;font-size:11px;margin-top:8px"></div><div id="gCount" style="text-align:center;color:#666;font-size:12px;margin-top:12px"></div>
-<div id="gList" style="margin-top:10px"><div class="empty">Még nincs üzenet. Légy te az első! 👇</div></div>
+<div id="gList" style="margin-top:10px"><div class="empty">Még nincs üzenet.  👇</div></div>
 <p style="text-align:center;color:#555;font-size:11px;margin-top:20px">💜 Saját vendégkönyv - nem visz el másik oldalra, itt marad minden</p>
 </div>
 
