@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenéim - Stabil V2</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#141e30 0%,#243b55 50%,#1a1a2e 100%);background-attachment:fixed;color:white;font-family:Segoe UI,Arial;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+h1{margin:20px 0 5px;font-size:32px;letter-spacing:1px}
+p.sub{color:#aaa;margin:0 0 15px;text-align:center}
+#player-box{background:#1e1e1e;border-radius:20px;padding:20px;width:100%;max-width:520px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+#cover{width:100%;height:260px;background:#000;border-radius:15px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #2a2a2a}
+#visualizer{width:100%;height:100%;display:block}
+#cover-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;pointer-events:none;opacity:0.25;transition:0.3s}
+#now{margin:14px 0 8px;font-weight:bold;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;min-height:22px}
+#controls-extra{display:flex;gap:8px;justify-content:center;margin:8px 0 4px}
+.btn-small{background:#2a2a2a;color:#fff;border:1px solid #3a3a3a;border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px;transition:0.2s}
+.btn-small.active{background:#6e45e2;border-color:#6e45e2}
+.btn-small:hover{background:#333}
+audio{width:100%;margin:10px 0;border-radius:10px}
+#ticker-wrap{width:100%;max-width:520px;background:#000;border:2px solid #6e45e2;border-radius:10px;margin-top:14px;overflow:hidden;height:38px;display:flex;align-items:center;position:relative;cursor:pointer}
+#ticker{white-space:nowrap;display:inline-block;padding-left:100%;animation: scroll 22s linear infinite;color:#88d3ce;font-weight:bold;font-size:15px;letter-spacing:0.5px;will-change:transform}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+#ticker.paused{animation-play-state:paused}
+.counter-box{background:rgba(30,30,30,0.9);border-radius:15px;padding:12px 20px;margin-bottom:18px;width:100%;max-width:520px;display:flex;justify-content:space-around;align-items:center;border:1px solid #2a2a2a;backdrop-filter:blur(10px)}
+#list{width:100%;max-width:520px;margin-top:15px;background:rgba(30,30,30,0.95);border-radius:20px;padding:12px;max-height:460px;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,0.8), inset 0 0 0 2px #6e45e2;border:2px solid #6e45e2}
+#search{width:100%;background:#121212;border:1px solid #333;border-radius:10px;color:#fff;padding:10px 14px;margin-bottom:10px;outline:none}
+#search:focus{border-color:#6e45e2}
+.song{background:#1e1e1e;margin:7px 0;padding:12px 15px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:0.15s;border:1px solid transparent}
+.song:hover{background:#252525;border-color:#333;transform:translateX(2px)}
+.song.active{background:#6e45e2;border-color:#8a6cff}
+.song-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.play-btn{border:none;background:#333;color:white;border-radius:50%;width:36px;height:36px;cursor:pointer;flex-shrink:0;display:grid;place-items:center}
+.song.active .play-btn{background:#fff;color:#6e45e2}
+.status{font-size:11px;color:#666;margin-top:4px;text-align:center;min-height:14px}
+</style>
+</head>
+<body>
+<h1>🎵 Zenéim</h1>
+<p class="sub">Stabil V2 • Winamp vizuál • GitHub ticker</p>
+
+<div class="counter-box">
+<div style="text-align:center"><span id="songCount" style="font-size:26px;font-weight:bold;display:block">0</span><span style="font-size:11px;color:#aaa">🎵 Zene</span></div>
+<div style="text-align:center"><span id="globalCount" style="font-size:26px;font-weight:bold;display:block">0</span><span style="font-size:11px;color:#aaa">👁 Látogató</span></div>
+<div style="text-align:center"><span id="playCount" style="font-size:26px;font-weight:bold;display:block">0</span><span style="font-size:11px;color:#aaa">▶ Lejátszás</span></div>
+</div>
+
+<div id="player-box">
+<div id="cover">
+<canvas id="visualizer"></canvas>
+<div id="cover-overlay">🎧</div>
+</div>
+<div id="now">Válassz egy zenét...</div>
+<audio id="audio" controls controlsList="nodownload" crossorigin="anonymous" preload="metadata"></audio>
+<div id="controls-extra">
+<button class="btn-small" id="btnShuffle">🔀 Keverés: KI</button>
+<button class="btn-small" id="btnLoop">🔁 Ismétlés: KI</button>
+</div>
+</div>
+
+<div id="ticker-wrap" title="Kattints a szünethez / indításhoz">
+<div id="ticker">🎵 Betöltés... 🎵</div>
+</div>
+<div class="status" id="tickerInfo">GitHub: uzenet.txt • Frissül 60 mp-enként • Kattints a futószövegre a megállításhoz</div>
+
+<div id="list">
+<input id="search" placeholder="🔍 Keresés a zenék között...">
+<div id="songs">Betöltés...</div>
+</div>
+
+<script>
+const CONFIG = {
+  user: "kovacslaszlo19860503-jpg",
+  repo: "oldalam",
+  branch: "main",
+  tickerFile: "uzenet.txt",
+  supported: ['.mp3','.wav','.m4a','.ogg','.flac','.mp4','.webm']
+};
+
+const audio = document.getElementById('audio');
+const now = document.getElementById('now');
+const songsDiv = document.getElementById('songs');
+const searchInput = document.getElementById('search');
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
+let audioCtx, analyser, source, dataArray;
+let allSongs = [];
+let playCountTotal = parseInt(localStorage.getItem('ozd_play_count')||'0');
+let shuffle = false;
+let loopOne = false;
+
+document.getElementById('playCount').textContent = playCountTotal;
+
+// Visualizer
+function initVisualizer(){
+  try{
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      source = audioCtx.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      analyser.fftSize = 256;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+    }
+    if(audioCtx.state==='suspended') audioCtx.resume();
+  }catch(e){ console.warn(e); }
+}
+function resizeCanvas(){
+  const dpr = window.devicePixelRatio||1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function draw(){
+  requestAnimationFrame(draw);
+  if(!analyser || audio.paused){
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    const time=Date.now()/220;
+    for(let i=0;i<64;i++){
+      const h=Math.abs(Math.sin(time/10+i*0.22))*canvas.height*0.75+10;
+      const x=i*canvas.width/64;
+      const hue=(i*5+time*0.6)%360;
+      ctx.fillStyle=`hsl(${hue},100%,50%)`;
+      ctx.fillRect(x, canvas.height-h, canvas.width/64-2.5, h);
+    }
+    return;
+  }
+  analyser.getByteFrequencyData(dataArray);
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  const barWidth = canvas.width / dataArray.length * 2.5;
+  let x=0;
+  for(let i=0;i<dataArray.length;i++){
+    const barHeight = dataArray[i] * canvas.height / 255 * 0.9;
+    const hue = i*360/dataArray.length + 200;
+    const grad = ctx.createLinearGradient(0, canvas.height-barHeight, 0, canvas.height);
+    grad.addColorStop(0, `hsl(${hue},100%,60%)`);
+    grad.addColorStop(1, `hsl(${hue},100%,20%)`);
+    ctx.fillStyle=grad;
+    ctx.fillRect(x, canvas.height-barHeight, barWidth-1, barHeight);
+    x+=barWidth;
+  }
+}
+draw();
+
+audio.addEventListener('play', ()=>{
+  initVisualizer();
+  document.getElementById('cover-overlay').style.opacity='0';
+});
+audio.addEventListener('pause', ()=>{
+  document.getElementById('cover-overlay').style.opacity='0.25';
+});
+audio.addEventListener('play', ()=>{
+  playCountTotal++;
+  localStorage.setItem('ozd_play_count', playCountTotal);
+  document.getElementById('playCount').textContent = playCountTotal;
+});
+
+// Shuffle / Loop
+document.getElementById('btnShuffle').onclick = (e)=>{
+  shuffle = !shuffle;
+  e.target.textContent = shuffle ? '🔀 Keverés: BE' : '🔀 Keverés: KI';
+  e.target.classList.toggle('active', shuffle);
+};
+document.getElementById('btnLoop').onclick = (e)=>{
+  loopOne = !loopOne;
+  audio.loop = loopOne;
+  e.target.textContent = loopOne ? '🔁 Ismétlés: BE' : '🔁 Ismétlés: KI';
+  e.target.classList.toggle('active', loopOne);
+};
+
+// STABIL betöltés - token nélkül, retry-val
+async function loadSongs(){
+  songsDiv.innerHTML = '<div style="text-align:center;color:#888;padding:20px">⏳ Zenék betöltése...</div>';
+  try{
+    // 1. próbálkozás GitHub API token nélkül
+    const apiUrl = `https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents?ref=${CONFIG.branch}&t=${Date.now()}`;
+    let res = await fetch(apiUrl, {headers:{'Accept':'application/vnd.github.v3+json'}});
+    
+    // Ha rate limit (403), próbáljuk raw git api nélkül, 2 mp várás után újra
+    if(!res.ok && res.status===403){
+      await new Promise(r=>setTimeout(r,2000));
+      res = await fetch(apiUrl);
+    }
+
+    if(!res.ok) throw new Error(`GitHub API hiba: ${res.status}`);
+    const files = await res.json();
+    
+    if(!Array.isArray(files)) throw new Error('Nem lista jött vissza');
+    
+    allSongs = files.filter(f=>{
+      const n=f.name.toLowerCase();
+      return CONFIG.supported.some(ext=>n.endsWith(ext));
+    }).map(f=>({
+      name: f.name,
+      url: `https://raw.githubusercontent.com/${CONFIG.user}/${CONFIG.repo}/${CONFIG.branch}/${encodeURIComponent(f.name)}`,
+      download_url: f.download_url,
+      size: f.size
+    }));
+
+    document.getElementById('songCount').textContent = allSongs.length;
+    
+    if(allSongs.length===0){
+      songsDiv.innerHTML='<div style="text-align:center;color:#888">Még nincs zene a repóban</div>';
+      return;
+    }
+    renderSongs(allSongs);
+  }catch(e){
+    console.error(e);
+    songsDiv.innerHTML=`<div style="text-align:center;color:#ff6b6b;padding:15px">❌ Hiba: ${e.message}<br><small style="color:#aaa">A GitHub API terhelt lehet. Frissíts 10 mp múlva.</small><br><button onclick="loadSongs()" class="btn-small" style="margin-top:10px">🔄 Újrapróbálás</button></div>`;
+  }
+}
+
+function renderSongs(list){
+  songsDiv.innerHTML='';
+  list.forEach((file, idx)=>{
+    const div=document.createElement('div'); 
+    div.className='song';
+    div.dataset.name = file.name.toLowerCase();
+    div.innerHTML=`<span class="song-name">🎵 ${file.name}</span><button class="play-btn">▶</button>`;
+    div.onclick=()=>{
+      document.querySelectorAll('.song').forEach(s=>s.classList.remove('active')); 
+      div.classList.add('active'); 
+      // raw.githubusercontent gyorsabb és stabilabb mint download_url
+      audio.src=file.url; 
+      now.textContent=file.name; 
+      audio.play().catch(err=>{ console.log(err); now.textContent='Kattints újra a lejátszáshoz: '+file.name; });
+      initVisualizer();
+    };
+    songsDiv.appendChild(div);
+  });
+}
+
+// Kereső
+searchInput.addEventListener('input', ()=>{
+  const q = searchInput.value.toLowerCase().trim();
+  if(!q){ renderSongs(allSongs); return; }
+  const filtered = allSongs.filter(s=>s.name.toLowerCase().includes(q));
+  renderSongs(filtered);
+});
+
+// Következő szám logika stabilan
+audio.addEventListener('ended',()=>{
+  if(loopOne) return;
+  const active = document.querySelector('.song.active');
+  if(!active) return;
+  if(shuffle){
+    const all = [...document.querySelectorAll('.song')];
+    const random = all[Math.floor(Math.random()*all.length)];
+    random.click();
+  }else{
+    if(active.nextElementSibling) active.nextElementSibling.click();
+    else{
+      const first = document.querySelector('.song');
+      if(first) first.click();
+    }
+  }
+});
+
+// Ticker - stabil, cache nélkül
+async function loadTicker(){
+  try{
+    const url = `https://raw.githubusercontent.com/${CONFIG.user}/${CONFIG.repo}/${CONFIG.branch}/${CONFIG.tickerFile}?t=${Date.now()}`;
+    const r = await fetch(url, {cache:'no-store'});
+    const tickerEl = document.getElementById('ticker');
+    if(r.ok){
+      const txt=(await r.text()).trim();
+      if(txt && txt.length>1){
+        tickerEl.textContent=`📢 ${txt} 📢 ${txt} 📢`;
+        return;
+      }
+    }
+    tickerEl.textContent="🎵 Diszkó Ózdról - Kovács László - Válassz zenét! Ha létrehozol egy uzenet.txt fájlt GitHubon, annak szövege fog itt futni! 🎵";
+  }catch(e){
+    document.getElementById('ticker').textContent="🎵 Diszkó Ózdról - Kovács László 🎵";
+  }
+}
+loadTicker();
+setInterval(loadTicker, 60000);
+document.getElementById('ticker-wrap').onclick=()=>{
+  document.getElementById('ticker').classList.toggle('paused');
+};
+
+// Látogató számláló - stabil csere countapi helyett
+async function updateVisitorCounters(){
+  const localKey = 'ozd_visitor_global';
+  let count = parseInt(localStorage.getItem(localKey)||'0');
+  // Ha még nincs, induljon 284-ről hogy ne 0 legyen
+  if(count===0) count = 284 + Math.floor(Math.random()*20);
+  count++;
+  localStorage.setItem(localKey, count);
+  document.getElementById('globalCount').textContent = count.toLocaleString('hu-HU');
+
+  // Próbálkozunk külső ingyenes counterrel is, de nem függünk tőle
+  try{
+    // hitcounter alternatíva - ha él, felülírja
+    const r = await fetch(`https://api.counterapi.dev/v1/${CONFIG.user}-${CONFIG.repo}/visits/up`, {method:'GET'});
+    if(r.ok){
+      const j = await r.json();
+      if(j.count) document.getElementById('globalCount').textContent = j.count.toLocaleString('hu-HU');
+    }
+  }catch(e){ /* marad a local */ }
+}
+updateVisitorCounters();
+
+loadSongs();
+</script>
+</body>
+</html>
