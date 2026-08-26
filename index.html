@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenéim</title>
+<style>
+body{margin:0;background:linear-gradient(135deg,#141e30 0%,#243b55 50%,#1a1a2e 100%);background-attachment:fixed;color:white;font-family:Segoe UI,Arial;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+h1{margin:20px 0 5px;font-size:32px}
+p.sub{color:#aaa;margin:0 0 15px;text-align:center}
+#player-box{background:#1e1e1e;border-radius:20px;padding:20px;width:100%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+#cover{width:100%;height:250px;background:#000;border-radius:15px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#visualizer{width:100%;height:100%;display:block}
+#cover-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;pointer-events:none;opacity:0.3}
+#now{margin:15px 0 10px;font-weight:bold;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+audio{width:100%;margin:10px 0}
+#ticker-wrap{width:100%;max-width:500px;background:#000;border:2px solid #6e45e2;border-radius:10px;margin-top:12px;overflow:hidden;height:36px;display:flex;align-items:center;position:relative}
+#ticker{white-space:nowrap;display:inline-block;padding-left:100%;animation: scroll 20s linear infinite;color:#88d3ce;font-weight:bold;font-size:15px;letter-spacing:0.5px}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+#ticker.paused{animation-play-state:paused}
+#list{width:100%;max-width:500px;margin-top:15px;background:rgba(30,30,30,0.95);border-radius:20px;padding:15px;max-height:400px;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,0.8), inset 0 0 0 2px #6e45e2;border:2px solid #6e45e2}
+.song{background:#1e1e1e;margin:8px 0;padding:12px 15px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.song.active{background:#6e45e2}
+.counter-box{background:#1e1e1e;border-radius:15px;padding:12px 20px;margin-bottom:20px;width:100%;max-width:500px;display:flex;justify-content:space-around;align-items:center;border:1px solid #2a2a2a}
+#main-nav{background:#1e1e1e;border-radius:15px;padding:10px;width:100%;max-width:500px;display:flex;justify-content:center;gap:10px;margin-bottom:20px;border:1px solid #2a2a2a}
+.nav-btn{border:none;padding:10px 20px;border-radius:10px;font-weight:bold;cursor:pointer;text-decoration:none;color:white;font-size:14px}
+.nav-btn.active{background:#6e45e2}
+.nav-btn.inactive{background:#333}
+</style>
+</head>
+<body>
+<h1>🎵 Zenéim</h1>
+<p class="sub">diszkó zenék </p>
+
+<div class="counter-box">
+<div style="text-align:center"><span id="songCount" style="font-size:26px;font-weight:bold;display:block">...</span><span style="font-size:11px;color:#aaa">🎵 Zene</span></div>
+<div style="text-align:center"><span id="globalCount" style="font-size:26px;font-weight:bold;display:block">...</span><span style="font-size:11px;color:#aaa">👁 Látogató</span></div>
+</div>
+
+<div id="main-nav">
+<button class="nav-btn active">🎵 Zenék</button>
+<a href="kepek.html" class="nav-btn inactive">📸 Képek</a>
+</div>
+
+<div id="player-box">
+<div id="cover">
+<canvas id="visualizer"></canvas>
+<div id="cover-overlay">🎧</div>
+</div>
+<div id="now">Válassz egy zenét...</div>
+<audio id="audio" controls controlsList="nodownload" crossorigin="anonymous"></audio>
+</div>
+
+<div id="ticker-wrap" title="Kattints a szünethez">
+<div id="ticker">🎵 Betöltés 🎵</div>
+</div>
+<div style="font-size:11px;color:#666;margin-top:4px;text-align:center">Kovács László oldala </div>
+
+<div id="list">Betöltés...</div>
+
+<script>
+const user = "kovacslaszlo19860503-jpg";
+const repo = "oldalam";
+const TOKEN_URL = "https://kvdb.io/ozd-zenek-vendegkonyv-2026-laci-token/gh_token_shared";
+const EMBEDDED_TOKEN = "";
+const TICKER_FILE = "uzenet.txt";
+
+async function getSharedToken(){
+  if(EMBEDDED_TOKEN && EMBEDDED_TOKEN.startsWith('ghp_')) return EMBEDDED_TOKEN;
+  let tok = localStorage.getItem('gh_token');
+  if(tok && tok.startsWith('ghp_')) return tok;
+  try{
+    const r = await fetch(TOKEN_URL+`?t=${Date.now()}`);
+    if(r.ok){
+      const t = (await r.text()).trim();
+      if(t && t.startsWith('ghp_')){ localStorage.setItem('gh_token', t); return t; }
+    }
+  }catch(e){}
+  return null;
+}
+
+const audio=document.getElementById('audio'); 
+const now=document.getElementById('now'); 
+const listDiv=document.getElementById('list');
+const canvas=document.getElementById('visualizer');
+const ctx=canvas.getContext('2d');
+let audioCtx, analyser, source, dataArray;
+
+function initVisualizer(){
+  try{
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      source = audioCtx.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      analyser.fftSize = 256;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+    }
+  }catch(e){}
+}
+
+function resizeCanvas(){
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function draw(){
+  requestAnimationFrame(draw);
+  if(!analyser){ 
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    const time=Date.now()/200;
+    for(let i=0;i<64;i++){
+      const h=Math.abs(Math.sin(time/10+i*0.2))*canvas.height*0.8+10;
+      const x=i*canvas.width/64;
+      const hue=(i*4+time)%360;
+      ctx.fillStyle=`hsl(${hue},100%,50%)`;
+      ctx.fillRect(x, canvas.height-h, canvas.width/64-2, h);
+    }
+    return;
+  }
+  analyser.getByteFrequencyData(dataArray);
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  const barWidth = canvas.width / dataArray.length * 2.5;
+  let x=0;
+  for(let i=0;i<dataArray.length;i++){
+    const barHeight = dataArray[i] * canvas.height / 255 * 0.9;
+    const hue = i*360/dataArray.length + 200;
+    const grad = ctx.createLinearGradient(0, canvas.height-barHeight, 0, canvas.height);
+    grad.addColorStop(0, `hsl(${hue},100%,60%)`);
+    grad.addColorStop(1, `hsl(${hue},100%,20%)`);
+    ctx.fillStyle=grad;
+    ctx.fillRect(x, canvas.height-barHeight, barWidth-1, barHeight);
+    x+=barWidth;
+  }
+}
+draw();
+
+audio.addEventListener('play', ()=>{
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+  initVisualizer();
+  document.getElementById('cover-overlay').style.opacity='0';
+});
+audio.addEventListener('pause', ()=>{
+  document.getElementById('cover-overlay').style.opacity='0.3';
+});
+
+async function loadSongs(){
+ try{
+  const tok = await getSharedToken();
+  let h={}; if(tok) h['Authorization']=`token ${tok}`;
+  const res=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/?t=${Date.now()}`,{headers:h});
+  const files=await res.json();
+  if(!Array.isArray(files)){ listDiv.innerHTML=`<div style="text-align:center;color:#ffcc70">⏳ GitHub terhelt, frissíts!</div>`; return; }
+  const mp3s=files.filter(f=>{ const n=f.name.toLowerCase(); return n.endsWith('.mp3')||n.endsWith('.wav')||n.endsWith('.m4a')||n.endsWith('.ogg')||n.endsWith('.flac'); });
+  document.getElementById('songCount').textContent=mp3s.length;
+  if(mp3s.length===0){ listDiv.innerHTML=`<div style="text-align:center;color:#888">Még nincs zene</div>`; return; }
+  listDiv.innerHTML="";
+  mp3s.forEach(file=>{
+    const div=document.createElement('div'); div.className='song';
+    div.innerHTML=`<span>🎵 ${file.name}</span><button style="border:none;background:#333;color:white;border-radius:50%;width:36px;height:36px">▶</button>`;
+    div.onclick=()=>{ 
+      document.querySelectorAll('.song').forEach(s=>s.classList.remove('active')); 
+      div.classList.add('active'); 
+      audio.src=file.download_url; 
+      now.textContent=file.name; 
+      audio.play().catch(()=>{}); 
+      initVisualizer();
+    };
+    listDiv.appendChild(div);
+  });
+ }catch(e){ listDiv.innerHTML="Hiba: "+e; }
+}
+loadSongs();
+audio.addEventListener('ended',()=>{ const a=document.querySelector('.song.active'); if(a&&a.nextElementSibling) a.nextElementSibling.click(); });
+
+async function loadTicker(){
+ try{
+  const r=await fetch(`https://raw.githubusercontent.com/${user}/${repo}/main/${TICKER_FILE}?t=${Date.now()}`,{cache:'no-store'});
+  if(r.ok){
+    const txt=(await r.text()).trim();
+    if(txt){
+      document.getElementById('ticker').textContent=`📢 ${txt} 📢 ${txt} 📢`;
+      return;
+    }
+  }
+ }catch(e){}
+ document.getElementById('ticker').textContent="🎵 Diszkó Ózdról - Kovács László - Válassz zenét! Ha létrehozol egy uzenet.txt fájlt GitHubon, annak szövege fog itt futni! 🎵";
+}
+loadTicker();
+setInterval(loadTicker, 30000);
+document.getElementById('ticker-wrap').onclick=()=>{
+  document.getElementById('ticker').classList.toggle('paused');
+};
+
+async function updateVisitorCounters(){
+ try{
+  const res=await fetch(`https://api.countapi.xyz/hit/kovacslaszlo19860503-jpg-oldalam-v4/latogato`);
+  const data=await res.json();
+  document.getElementById('globalCount').textContent=data.value;
+ }catch(e){ document.getElementById('globalCount').textContent="..."; }
+}
+updateVisitorCounters();
+</script>
+</body>
+</html>
